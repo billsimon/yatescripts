@@ -56,13 +56,14 @@ for (;;) {
 			Yate::Output($ev->params['id'] . ": Rerouting to sip:" . $dest);
 			$ev->retval = 'sip/sip:' . $dest;
 			$ev->setParam('redirect', 'true');
-			unset($lookup);  // reset for next time around this loop
 		} else {
 			Yate::Output($ev->params['id'] . ": Not found");
 			$ev->retval = '-';
 			$ev->setparam('error', '404');
 			$ev->setparam('reason', 'TXT Not Found');
 		}
+		unset($lookup);  // reset for next time around this loop
+
 		/* This is extremely important.
 		   We MUST let messages return, handled or not */
 		$ev->handled = TRUE;  // this is the only routing in all cases. Either redirect or 404.
