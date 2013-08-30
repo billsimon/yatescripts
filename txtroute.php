@@ -14,8 +14,8 @@
 */
 require_once("libyate.php");
 
-/* Define an array of local domains/IPs that we will ignore requests for. */
-$localDomains = array('my.domain.name', 'ip.ad.dr.es');
+/* Define an array of local domains that we will ignore. Use all lower-case here. */
+$localDomains = array('my.domain.name', 'ip.ad.dr.ess');
 
 /* Always the first action to do */
 Yate::Init();
@@ -51,7 +51,7 @@ for (;;) {
 		$userPart = preg_replace('/[^[:alnum:]]/', '', $parts[1]);  // remove non-alpha/num
 		$domainPart = $parts[2];
 		Yate::Output($ev->params['id'] . ": Invite from " . $ev->params['sip_from']);
-		if (!in_array($domainPart, $localDomains)) {  // check whether the domain requested is our domain/IP
+		if (!in_array(strtolower($domainPart), $localDomains)) {  // check whether the domain requested is our domain/IP
 			Yate::Output($ev->params['id'] . ": Looking up TXT for $userPart@$domainPart");
 
 			$lookup = dns_get_record("sip-$userPart.$domainPart", DNS_TXT); // sip-user.dom.ain IN TXT?
