@@ -14,6 +14,9 @@
 */
 require_once("libyate.php");
 
+/* Define an array of local domains/IPs that we will ignore requests for. */
+$localDomains = array('my.domain.name', 'ip.ad.dr.es');
+
 /* Always the first action to do */
 Yate::Init();
 
@@ -48,21 +51,28 @@ for (;;) {
 		$userPart = preg_replace('/[^[:alnum:]]/', '', $parts[1]);  // remove non-alpha/num
 		$domainPart = $parts[2];
 		Yate::Output($ev->params['id'] . ": Invite from " . $ev->params['sip_from']);
-		Yate::Output($ev->params['id'] . ": Looking up TXT for $userPart@$domainPart");
+		if (!in_array($domainPart, $localDomains)) {  // check whether the domain requested is our domain/IP
+			Yate::Output($ev->params['id'] . ": Looking up TXT for $userPart@$domainPart");
 
-		$lookup = dns_get_record("sip-$userPart.$domainPart", DNS_TXT); // sip-user.dom.ain IN TXT?
-		if (isset($lookup[0]['txt'])) {  // only acts on the first TXT record found for the name
-			$dest = $lookup[0]['txt'];
-			Yate::Output($ev->params['id'] . ": Rerouting to sip:" . $dest);
-			$ev->retval = 'sip/sip:' . $dest;
-			$ev->setParam('redirect', 'true');
-		} else {
-			Yate::Output($ev->params['id'] . ": Not found");
+			$lookup = dns_get_record("sip-$userPart.$domainPart", DNS_TXT); // sip-user.dom.ain IN TXT?
+			if (isset($lookup[0]['txt'])) {  // only acts on the first TXT record found for the name
+				$dest = $lookup[0]['txt'];
+				Yate::Output($ev->params['id'] . ": Rerouting to sip:" . $dest);
+				$ev->retval = 'sip/sip:' . $dest;
+				$ev->setParam('redirect', 'true');
+			} else {
+				Yate::Output($ev->params['id'] . ": Not found");
+				$ev->retval = '-';
+				$ev->setparam('error', '404');
+				$ev->setparam('reason', 'TXT Not Found');
+			}
+			unset($lookup);  // reset for next time around this loop
+		} else { // reject requests to our domain/IP
+			Yate::Output($ev->params['id'] . ": Ignoring local request.");
 			$ev->retval = '-';
-			$ev->setparam('error', '404');
-			$ev->setparam('reason', 'TXT Not Found');
+			$ev->setparam('error', '403');
+			$ev->setparam('reason', 'Forbidden');
 		}
-		unset($lookup);  // reset for next time around this loop
 
 		/* This is extremely important.
 		   We MUST let messages return, handled or not */
